@@ -1,0 +1,13 @@
+# AeroEdge System Dependencies
+
+# Core Python libraries
+typing_extensions>=4.0.0
+python-dotenv>=1.0.0
+
+# Logging and monitoring
+structlog>=25.0.0
+
+# For future extensions (will be installed if needed)
+# numpy>=1.24.0
+# opencv-python>=4.0.0
+# requests>=2.28.0

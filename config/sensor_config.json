@@ -1,0 +1,27 @@
+{
+    "sensor_types": [
+        "camera",
+        "temperature",
+        "humidity",
+        "pressure",
+        "light",
+        "motion"
+    ],
+    "sampling_rates": {
+        "camera": 10,
+        "temperature": 60,
+        "humidity": 60,
+        "pressure": 60,
+        "light": 30,
+        "motion": 5
+    },
+    "data_validation": {
+        "enabled": true,
+        "thresholds": {
+            "temperature_min": -40,
+            "temperature_max": 85,
+            "humidity_min": 0,
+            "humidity_max": 100
+        }
+    }
+}

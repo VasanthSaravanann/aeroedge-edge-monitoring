@@ -1,0 +1,37 @@
+{
+    "alert_severity": {
+        "LOW": {
+            "min_confidence": 0.0,
+            "max_confidence": 0.3,
+            "min_risk": 0,
+            "max_risk": 1
+        },
+        "MODERATE": {
+            "min_confidence": 0.3,
+            "max_confidence": 0.6,
+            "min_risk": 1,
+            "max_risk": 2
+        },
+        "HIGH": {
+            "min_confidence": 0.6,
+            "max_confidence": 0.8,
+            "min_risk": 2,
+            "max_risk": 3
+        },
+        "CRITICAL": {
+            "min_confidence": 0.8,
+            "max_confidence": 1.0,
+            "min_risk": 3,
+            "max_risk": 4
+        }
+    },
+    "transmission": {
+        "retry_attempts": 3,
+        "retry_delay_seconds": 30,
+        "max_queue_size": 100
+    },
+    "filters": {
+        "min_anomaly_score": 0.1,
+        "time_window_minutes": 5
+    }
+}

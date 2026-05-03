@@ -1,0 +1,21 @@
+{
+    "model_paths": {
+        "local": "./models/",
+        "remote": "https://mcp.api-inference.modelscope.ai/"
+    },
+    "model_format": "onnx",
+    "quantization": {
+        "bits": 8,
+        "type": "uint8"
+    },
+    "optimization": {
+        "enabled": true,
+        "target_device": "edge",
+        "memory_limit_mb": 50
+    },
+    "inference_settings": {
+        "batch_size": 1,
+        "precision": "fp32",
+        "thread_count": 2
+    }
+}

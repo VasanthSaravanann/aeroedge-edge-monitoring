@@ -7,6 +7,8 @@ Coordinates all components of the edge AI monitoring system.
 import logging
 import time
 import argparse
+import sys
+import traceback
 from sensor_processor import SensorDataAggregator
 from edge_inference import EdgeAIProcessor
 from alert_system import AlertSystem
@@ -37,49 +39,98 @@ def main():
     logger = logging.getLogger(__name__)
 
     logger.info("Starting AeroEdge System")
+    logger.info(f"Debug mode: {args.debug}")
+    logger.info(f"Test mode: {args.test}")
 
+    # Initialize components
     try:
-        # Initialize components
         logger.info("Initializing system components...")
 
         sensor_aggregator = SensorDataAggregator()
         ai_processor = EdgeAIProcessor()
         alert_system = AlertSystem()
 
-        # Load AI model
+        logger.info("System components initialized successfully")
+
+    except Exception as e:
+        logger.error(f"Failed to initialize system components: {e}")
+        logger.error(f"Traceback: {traceback.format_exc()}")
+        return False
+
+    # Load AI model
+    try:
         logger.info("Loading AI model...")
         if not ai_processor.load_model():
             logger.error("Failed to load AI model. Exiting.")
             return False
+        logger.info("AI model loaded successfully")
 
-        # Validate model
+    except Exception as e:
+        logger.error(f"Failed to load AI model: {e}")
+        logger.error(f"Traceback: {traceback.format_exc()}")
+        return False
+
+    # Validate model
+    try:
         logger.info("Validating AI model...")
         if not ai_processor.validate_model():
             logger.error("Model validation failed. Exiting.")
             return False
+        logger.info("AI model validated successfully")
 
-        # Main processing loop
+    except Exception as e:
+        logger.error(f"Model validation failed: {e}")
+        logger.error(f"Traceback: {traceback.format_exc()}")
+        return False
+
+    # Main processing loop
+    try:
         logger.info("Starting main processing loop...")
 
         if args.test:
             logger.info("Running in test mode")
             # Run a single test cycle
-            run_single_cycle(sensor_aggregator, ai_processor, alert_system)
+            success = run_single_cycle(sensor_aggregator, ai_processor, alert_system)
+            if not success:
+                logger.error("Test cycle failed")
+                return False
         else:
             # Continuous monitoring loop
+            cycle_count = 0
             while True:
-                run_single_cycle(sensor_aggregator, ai_processor, alert_system)
-                time.sleep(10)  # Wait 10 seconds between cycles
+                try:
+                    success = run_single_cycle(sensor_aggregator, ai_processor, alert_system)
+                    if not success:
+                        logger.warning("Processing cycle had issues, continuing...")
 
-    except KeyboardInterrupt:
-        logger.info("Received interrupt signal. Shutting down...")
+                    cycle_count += 1
+                    if cycle_count % 10 == 0:
+                        logger.info(f"Processed {cycle_count} cycles successfully")
+
+                    time.sleep(10)  # Wait 10 seconds between cycles
+
+                except KeyboardInterrupt:
+                    logger.info("Received interrupt signal. Shutting down...")
+                    break
+                except Exception as e:
+                    logger.error(f"Error in main processing loop: {e}")
+                    logger.error(f"Traceback: {traceback.format_exc()}")
+                    # Continue processing despite individual cycle errors
+                    time.sleep(5)  # Brief pause before retrying
+
     except Exception as e:
         logger.error(f"Unexpected error in main loop: {e}")
+        logger.error(f"Traceback: {traceback.format_exc()}")
         return False
     finally:
         # Cleanup
         logger.info("Cleaning up...")
-        ai_processor.unload_model()
+        try:
+            ai_processor.unload_model()
+            logger.info("AI model unloaded successfully")
+        except Exception as e:
+            logger.error(f"Error during model unload: {e}")
+
         logger.info("System shutdown complete")
 
     return True
@@ -98,13 +149,20 @@ def run_single_cycle(sensor_aggregator, ai_processor, alert_system):
 
         # Process alert
         logger.info("Processing alert...")
-        alert_system.process_alert(inference_result)
+        success = alert_system.process_alert(inference_result)
 
-        logger.info("Cycle completed successfully")
+        if success:
+            logger.info("Cycle completed successfully")
+        else:
+            logger.warning("Alert processing failed, but cycle continues")
+
+        return True
 
     except Exception as e:
         logger.error(f"Error in processing cycle: {e}")
+        logger.error(f"Traceback: {traceback.format_exc()}")
+        return False
 
 if __name__ == "__main__":
     success = main()
-    exit(0 if success else 1)
+    sys.exit(0 if success else 1)

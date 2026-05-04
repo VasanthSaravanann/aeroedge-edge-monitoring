@@ -3,7 +3,8 @@
 # AeroEdge System Launcher Script
 # Launches the edge AI monitoring system
 
-set -e  # Exit on any error
+# Exit on any error
+set -e
 
 # Colors for output
 RED='\033[0;31m'
@@ -81,6 +82,103 @@ validate_config() {
         mkdir -p models
     fi
 
+    # Validate configuration files exist
+    if [[ ! -f "config/sensor_config.json" ]]; then
+        print_warning "Sensor config not found, creating default"
+        cat > config/sensor_config.json << EOF
+{
+    "sensor_types": ["camera", "temperature", "humidity", "pressure", "light", "motion"],
+    "sampling_rates": {
+        "camera": 10,
+        "temperature": 60,
+        "humidity": 60,
+        "pressure": 60,
+        "light": 30,
+        "motion": 5
+    },
+    "data_validation": {
+        "enabled": true,
+        "thresholds": {
+            "temperature_min": -40,
+            "temperature_max": 85,
+            "humidity_min": 0,
+            "humidity_max": 100
+        }
+    }
+}
+EOF
+    fi
+
+    if [[ ! -f "config/model_config.json" ]]; then
+        print_warning "Model config not found, creating default"
+        cat > config/model_config.json << EOF
+{
+    "model_paths": {
+        "local": "./models/",
+        "remote": "https://mcp.api-inference.modelscope.ai/"
+    },
+    "model_format": "onnx",
+    "quantization": {
+        "bits": 8,
+        "type": "uint8"
+    },
+    "optimization": {
+        "enabled": true,
+        "target_device": "edge",
+        "memory_limit_mb": 50
+    },
+    "inference_settings": {
+        "batch_size": 1,
+        "precision": "fp32",
+        "thread_count": 2
+    }
+}
+EOF
+    fi
+
+    if [[ ! -f "config/alert_config.json" ]]; then
+        print_warning "Alert config not found, creating default"
+        cat > config/alert_config.json << EOF
+{
+    "alert_severity": {
+        "LOW": {
+            "min_confidence": 0.0,
+            "max_confidence": 0.3,
+            "min_risk": 0,
+            "max_risk": 1
+        },
+        "MODERATE": {
+            "min_confidence": 0.3,
+            "max_confidence": 0.6,
+            "min_risk": 1,
+            "max_risk": 2
+        },
+        "HIGH": {
+            "min_confidence": 0.6,
+            "max_confidence": 0.8,
+            "min_risk": 2,
+            "max_risk": 3
+        },
+        "CRITICAL": {
+            "min_confidence": 0.8,
+            "max_confidence": 1.0,
+            "min_risk": 3,
+            "max_risk": 4
+        }
+    },
+    "transmission": {
+        "retry_attempts": 3,
+        "retry_delay_seconds": 30,
+        "max_queue_size": 100
+    },
+    "filters": {
+        "min_anomaly_score": 0.1,
+        "time_window_minutes": 5
+    }
+}
+EOF
+    fi
+
     print_status "Configuration validation complete"
 }
 
@@ -115,9 +213,13 @@ run_system() {
             python3 -c "import sensor_processor; import edge_inference; import alert_system; print('All modules imported successfully')"
             echo "System validation complete"
             ;;
+        "test-unit")
+            print_status "Running unit tests..."
+            python3 test_unit.py
+            ;;
         *)
             print_error "Unknown mode: $mode"
-            echo "Usage: $0 {start|test|status|stop|validate}"
+            echo "Usage: $0 {start|test|status|stop|validate|test-unit}"
             exit 1
             ;;
     esac
@@ -128,7 +230,7 @@ main() {
     # Parse arguments
     if [[ $# -eq 0 ]]; then
         echo "AeroEdge System Launcher"
-        echo "Usage: $0 {start|test|status|stop|validate}"
+        echo "Usage: $0 {start|test|status|stop|validate|test-unit}"
         echo ""
         echo "Commands:"
         echo "  start    - Start the monitoring system"
@@ -136,6 +238,7 @@ main() {
         echo "  status   - Check system status"
         echo "  stop     - Stop the monitoring system"
         echo "  validate - Validate system setup"
+        echo "  test-unit - Run unit tests"
         exit 1
     fi
 

@@ -7,6 +7,7 @@ Handles collection and fusion of video and environmental sensor data.
 import logging
 from typing import Dict, Any, List
 import time
+import random
 
 class SensorDataAggregator:
     def __init__(self, config_file: str = "config/sensor_config.json"):
@@ -23,40 +24,95 @@ class SensorDataAggregator:
         self.sensor_data = {}
         self.processed_data = {}
 
+        # Load configuration
+        self._load_config()
+
+    def _load_config(self):
+        """Load sensor configuration"""
+        try:
+            import json
+            with open(self.config_file, 'r') as f:
+                self.config = json.load(f)
+            self.logger.info("Sensor configuration loaded successfully")
+        except Exception as e:
+            self.logger.warning(f"Could not load sensor config: {e}. Using defaults.")
+            # Default configuration
+            self.config = {
+                "sensor_types": ["camera", "temperature", "humidity", "pressure", "light", "motion"],
+                "sampling_rates": {
+                    "camera": 10,
+                    "temperature": 60,
+                    "humidity": 60,
+                    "pressure": 60,
+                    "light": 30,
+                    "motion": 5
+                },
+                "data_validation": {
+                    "enabled": True,
+                    "thresholds": {
+                        "temperature_min": -40,
+                        "temperature_max": 85,
+                        "humidity_min": 0,
+                        "humidity_max": 100
+                    }
+                }
+            }
+
     def collect_video_data(self) -> Dict[str, Any]:
         """
         Collect video frame data from device camera
         """
-        # Placeholder for actual video collection logic
-        # This would interface with device camera APIs
+        # Simulated video data collection for demonstration
+        # In a real implementation, this would interface with actual camera APIs
         self.logger.info("Collecting video frame data...")
 
+        # Simulate video frame data
         video_data = {
             "timestamp": time.time(),
-            "frame_count": 0,
+            "frame_count": random.randint(0, 100),
             "resolution": "1920x1080",
-            "fps": 30
+            "fps": 30,
+            "frame_width": 1920,
+            "frame_height": 1080,
+            "quality_score": random.uniform(0.8, 1.0)
         }
 
+        self.logger.info("Video data collected successfully")
         return video_data
 
     def collect_environmental_data(self) -> Dict[str, Any]:
         """
         Collect environmental sensor data
         """
-        # Placeholder for actual environmental sensor collection
-        # This would interface with various sensor APIs
+        # Simulated environmental sensor data for demonstration
+        # In a real implementation, this would interface with actual sensors
         self.logger.info("Collecting environmental sensor data...")
 
+        # Simulate environmental data
         environmental_data = {
             "timestamp": time.time(),
-            "temperature": 25.5,
-            "humidity": 60.0,
-            "pressure": 1013.25,
-            "light_level": 500,
-            "motion_detected": False
+            "temperature": round(random.uniform(-10.0, 40.0), 2),
+            "humidity": round(random.uniform(0.0, 100.0), 2),
+            "pressure": round(random.uniform(950.0, 1050.0), 2),
+            "light_level": random.randint(0, 1000),
+            "motion_detected": random.choice([True, False]),
+            "battery_level": round(random.uniform(20.0, 100.0), 2)
         }
 
+        # Validate data if validation is enabled
+        if self.config.get("data_validation", {}).get("enabled", False):
+            thresholds = self.config["data_validation"]["thresholds"]
+            # Validate temperature
+            temp = environmental_data["temperature"]
+            if temp < thresholds["temperature_min"] or temp > thresholds["temperature_max"]:
+                self.logger.warning(f"Temperature out of range: {temp}")
+
+            # Validate humidity
+            humidity = environmental_data["humidity"]
+            if humidity < thresholds["humidity_min"] or humidity > thresholds["humidity_max"]:
+                self.logger.warning(f"Humidity out of range: {humidity}")
+
+        self.logger.info("Environmental data collected successfully")
         return environmental_data
 
     def fuse_multimodal_data(self, video_data: Dict[str, Any],
@@ -78,9 +134,27 @@ class SensorDataAggregator:
             "fusion_timestamp": time.time()
         }
 
-        # Add any derived features
-        fused_data["temperature_humidity_ratio"] = \
-            environmental_data["temperature"] / environmental_data["humidity"] if environmental_data["humidity"] > 0 else 0
+        # Add derived features for enhanced AI processing
+        try:
+            if environmental_data["humidity"] > 0:
+                fused_data["temperature_humidity_ratio"] = \
+                    environmental_data["temperature"] / environmental_data["humidity"]
+            else:
+                fused_data["temperature_humidity_ratio"] = 0.0
+
+            # Add light intensity ratio
+            fused_data["light_temperature_ratio"] = \
+                environmental_data["light_level"] / (environmental_data["temperature"] + 1)
+
+            # Motion and temperature correlation
+            fused_data["motion_temperature_correlation"] = \
+                1 if environmental_data["motion_detected"] and environmental_data["temperature"] > 25 else 0
+
+        except Exception as e:
+            self.logger.warning(f"Error calculating derived features: {e}")
+            fused_data["temperature_humidity_ratio"] = 0.0
+            fused_data["light_temperature_ratio"] = 0.0
+            fused_data["motion_temperature_correlation"] = 0
 
         self.logger.info("Multimodal data fusion completed")
         return fused_data
